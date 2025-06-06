@@ -64,7 +64,7 @@ def share_folder(folder_path):
 def connect_to_share():
     run_cmd(r'start \\192.168.0.1\Shared')
 
-def wait_for_ping(ip, status_label):
+def wait_for_ping(ip, status_label, app_instance):
     while True:
         result = run_cmd(f"ping -n 1 {ip}")
         if result.returncode == 0:
@@ -73,6 +73,38 @@ def wait_for_ping(ip, status_label):
     status_label.configure(text="Connected!", text_color="green")
     time.sleep(1)
     connect_to_share()
+    # Start continuous monitoring after successful connection
+    app_instance.start_connection_monitoring(ip)
+
+def monitor_connection(ip, status_label, stop_event):
+    """Continuously monitor the connection status"""
+    consecutive_failures = 0
+    max_failures = 3  # Allow 3 consecutive failures before marking as disconnected
+    
+    while not stop_event.is_set():
+        try:
+            result = run_cmd(f"ping -n 1 -w 2000 {ip}")  # 2 second timeout
+            
+            if result.returncode == 0:
+                # Connection successful
+                consecutive_failures = 0
+                # Only update if status is not already "Connected!"
+                current_text = status_label.cget("text")
+                if current_text != "Connected!":
+                    status_label.configure(text="Connected!", text_color="green")
+            else:
+                # Connection failed
+                consecutive_failures += 1
+                if consecutive_failures >= max_failures:
+                    status_label.configure(text="Connection Lost!", text_color="red")
+                    
+        except Exception as e:
+            consecutive_failures += 1
+            if consecutive_failures >= max_failures:
+                status_label.configure(text="Connection Lost!", text_color="red")
+        
+        # Wait before next check
+        time.sleep(2)
 
 def revert_changes(role):
     print("[*] Reverting network configuration...")
@@ -89,6 +121,10 @@ class FileShareApp(ctk.CTk):
         
         self.role = ctk.StringVar(value="Sender")		
         self.folder_path = ctk.StringVar(value="C:\\Shared")
+        
+        # Connection monitoring variables
+        self.monitoring_thread = None
+        self.stop_monitoring = threading.Event()
         
         self.create_widgets()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -110,6 +146,10 @@ class FileShareApp(ctk.CTk):
     def start(self):
         role = self.role.get()
         self.status_label.configure(text=f"Configuring as {role}...", text_color="blue")
+        
+        # Stop any existing monitoring
+        self.stop_connection_monitoring()
+        
         threading.Thread(target=self.process_role, daemon=True).start()
 
     def process_role(self):
@@ -120,12 +160,34 @@ class FileShareApp(ctk.CTk):
             enable_file_sharing()
             share_folder(self.folder_path.get())
             self.status_label.configure(text="Waiting for receiver...", text_color="orange")
-            wait_for_ping("192.168.0.2", self.status_label)
+            wait_for_ping("192.168.0.2", self.status_label, self)
         else:
             self.status_label.configure(text="Waiting for sender...", text_color="orange")
-            wait_for_ping("192.168.0.1", self.status_label)
+            wait_for_ping("192.168.0.1", self.status_label, self)
+
+    def start_connection_monitoring(self, target_ip):
+        """Start monitoring the connection to the target IP"""
+        # Stop any existing monitoring first
+        self.stop_connection_monitoring()
+        
+        # Create new monitoring thread
+        self.stop_monitoring = threading.Event()
+        self.monitoring_thread = threading.Thread(
+            target=monitor_connection, 
+            args=(target_ip, self.status_label, self.stop_monitoring),
+            daemon=True
+        )
+        self.monitoring_thread.start()
+
+    def stop_connection_monitoring(self):
+        """Stop the connection monitoring thread"""
+        if self.monitoring_thread and self.monitoring_thread.is_alive():
+            self.stop_monitoring.set()
+            self.monitoring_thread.join(timeout=1)
 
     def on_close(self):
+        # Stop monitoring before closing
+        self.stop_connection_monitoring()
         revert_changes(self.role.get())
         self.destroy()
 
