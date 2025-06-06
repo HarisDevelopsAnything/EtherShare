@@ -62,7 +62,7 @@ def share_folder(folder_path):
     run_cmd(f'icacls "{folder_path}" /grant Everyone:F /T')
 
 def connect_to_share():
-    run_cmd(r'start \\192.168.0.1\Shared')
+    run_cmd(r'start \\192.168.0.2\Shared')
 
 def wait_for_ping(ip, status_label, app_instance):
     while True:
