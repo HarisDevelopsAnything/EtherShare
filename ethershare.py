@@ -184,13 +184,14 @@ class FileShareApp(ctk.CTk):
         help_menu = tk.Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="About", command=self.show_about)
+        help_menu.add_command(label="Instructions", command=self.show_inst)
 
     def create_widgets(self):
         ctk.CTkLabel(self, text="EtherShare", font=ctk.CTkFont(size=20, weight="bold")).pack(pady=10)
         ctk.CTkSegmentedButton(self, values=["Sender", "Receiver"], variable=self.role).pack(pady=10)
         ctk.CTkEntry(self, textvariable=self.folder_path, width=300).pack(pady=5)
         ctk.CTkButton(self, text="Start", command=self.start).pack(pady=20)
-        self.status_label = ctk.CTkLabel(self, text="Please connect ethernet cable to start. \nConnect the other end to other PC.", text_color="green")
+        self.status_label = ctk.CTkLabel(self, text="Please connect ethernet cable to start. \nConnect the other end to other PC.\n", text_color="green")
         self.status_label.pack(pady=10)
 
     def change_appearance(self, mode):
@@ -205,7 +206,8 @@ class FileShareApp(ctk.CTk):
 
     def show_about(self):
         messagebox.showinfo("About", "EtherShare v0.3 BETA\n\nSimple, fast local file sharing over direct connection.\nBy Haris S [HarisDevelopsAnything]\n 2025\nReleased under GNU GPL")
-
+    def show_inst(self):
+        messagebox.showinfo("Instructions", "1) Choose Sender or Receiver (Sender on one PC and Receiver on other)\n2) Click on Start button on both sides\n3) Wait for connection to succeed\n4) Enter the user name and password on Sender side to get access to the shared folder\n5) Paste any files you want into the folder to send!")
     def start(self):
         role = self.role.get()
         self.status_label.configure(text=f"Configuring as {role}...", text_color="blue")
