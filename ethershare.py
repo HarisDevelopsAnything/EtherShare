@@ -160,7 +160,6 @@ class FileShareApp(ctk.CTk):
 
         self.monitoring_thread = None
         self.stop_monitoring = threading.Event()
-
         self.create_menu()
         self.create_widgets()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -191,7 +190,7 @@ class FileShareApp(ctk.CTk):
         ctk.CTkSegmentedButton(self, values=["Sender", "Receiver"], variable=self.role).pack(pady=10)
         ctk.CTkEntry(self, textvariable=self.folder_path, width=300).pack(pady=5)
         ctk.CTkButton(self, text="Start", command=self.start).pack(pady=20)
-        self.status_label = ctk.CTkLabel(self, text="Ready to start (Running as Administrator)", text_color="green")
+        self.status_label = ctk.CTkLabel(self, text="Please connect ethernet cable to start. \nConnect the other end to other PC.", text_color="green")
         self.status_label.pack(pady=10)
 
     def change_appearance(self, mode):
